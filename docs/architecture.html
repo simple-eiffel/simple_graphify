@@ -76,10 +76,18 @@ graph.json  GRAPH_      graph.html  graph.dot
             <p>
                 <code>simple_eiffel_parser</code> (Gobo-backed, lightweight fallback) provides class
                 structure: names, flags, parents with rename/redefine, features with types.
-                Because Gobo's shallow preparse does not carry comments or contract text, class
-                descriptions come from the source <code>note description:</code> clause and
-                contract metrics from require/ensure keyword-line counts &mdash; both deterministic
-                raw-source scans over content the builder already holds in memory.
+                This tool takes Gobo's <em>preparse</em> path (<code>ET_EIFFEL_PREPARSER</code>),
+                which is deliberately shallow &mdash; it resolves class names and cluster structure
+                for fast lookup and does not decorate the AST with comments. Class descriptions here
+                therefore come from a raw-source scan of the <code>note description:</code> clause and
+                contract metrics from require/ensure keyword-line counts. That is an engineering
+                choice of this tool, <strong>not a limitation of Gobo</strong>: the full
+                <code>ET_EIFFEL_PARSER</code> carries contract assertions (pre/post/invariant) as
+                first-class AST nodes, and <code>ET_DECORATED_AST_FACTORY.set_keep_all_comments (True)</code>
+                retains comments in the AST &mdash; the same mechanism Gobo's own <code>gedoc</code>
+                uses for Eiffel pretty-printing. A future depth mode could adopt the full parser to
+                read contracts and comments structurally rather than by raw-source scan.
+                <em>(Correction courtesy of Eric Bezault.)</em>
             </p>
             <h3>Supplier scan, comment-aware</h3>
             <p>
