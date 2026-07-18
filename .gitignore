@@ -1,0 +1,32 @@
+# Eiffel build artifacts
+EIFGENs/
+Documentation/
+
+# Compiled files
+*.melted
+*.o
+*.obj
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Generated graph artifacts and test outputs
+graphify-out/
+data/output/
+
+# Backup files
+*.swp
+*.bak
+*~
+
+# IDE files
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+*.epr
+*.log

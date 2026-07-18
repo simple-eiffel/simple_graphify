@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<system xmlns="http://www.eiffel.com/developers/xml/configuration-1-23-0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.eiffel.com/developers/xml/configuration-1-23-0 http://www.eiffel.com/developers/xml/configuration-1-23-0.xsd" name="simple_graphify" uuid="7F3A9C21-5D48-4E76-B2A1-8C9E0D4F6B35" library_target="simple_graphify">
+	<description>Knowledge graph extractor and query tool for Eiffel projects (Graphify for Eiffel + Claude Code)</description>
+	<target name="simple_graphify">
+		<root all_classes="true"/>
+		<version major="1" minor="0" release="0" build="1"/>
+		<option warning="warning" syntax="standard" manifest_array_type="mismatch_warning">
+			<assertions precondition="true" postcondition="true" check="true" invariant="true" loop="true" supplier_precondition="true"/>
+		</option>
+		<capability>
+			<concurrency support="scoop"/>
+			<void_safety support="all"/>
+		</capability>
+		<library name="base" location="$ISE_LIBRARY\library\base\base.ecf">
+			<class_option class="ARRAYED_LIST">
+				<warning name="obsolete_feature" value="all"/>
+			</class_option>
+		</library>
+		<library name="simple_file" location="$SIMPLE_EIFFEL/simple_file/simple_file.ecf"/>
+		<library name="simple_cli" location="$SIMPLE_EIFFEL/simple_cli/simple_cli.ecf"/>
+		<library name="simple_json" location="$SIMPLE_EIFFEL/simple_json/simple_json.ecf"/>
+		<library name="simple_graph" location="$SIMPLE_EIFFEL/simple_graph/simple_graph.ecf"/>
+		<library name="simple_graphviz" location="$SIMPLE_EIFFEL/simple_graphviz/simple_graphviz.ecf"/>
+		<library name="simple_datetime" location="$SIMPLE_EIFFEL/simple_datetime/simple_datetime.ecf"/>
+		<library name="simple_eiffel_parser" location="$SIMPLE_EIFFEL/simple_eiffel_parser/simple_eiffel_parser.ecf"/>
+		<cluster name="src" location=".\src\" recursive="true"/>
+	</target>
+	<target name="simple_graphify_tests" extends="simple_graphify">
+		<description>Test suite for simple_graphify</description>
+		<root class="TEST_APP" feature="make"/>
+		<setting name="console_application" value="true"/>
+		<setting name="executable_name" value="test_app"/>
+		<library name="simple_testing" location="$SIMPLE_EIFFEL/simple_testing/simple_testing.ecf"/>
+		<cluster name="test" location=".\test\" recursive="true"/>
+	</target>
+	<target name="simple_graphify_app" extends="simple_graphify">
+		<description>simple_graphify command-line executable</description>
+		<root class="GRAPHIFY_APP" feature="make"/>
+		<setting name="console_application" value="true"/>
+		<setting name="executable_name" value="simple_graphify"/>
+		<cluster name="app" location=".\app\" recursive="true"/>
+	</target>
+</system>

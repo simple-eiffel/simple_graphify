@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<system xmlns="http://www.eiffel.com/developers/xml/configuration-1-23-0" name="toy_lib" uuid="A1B2C3D4-1111-2222-3333-444455556666" library_target="toy_lib">
+	<description>Toy fixture library for simple_graphify tests</description>
+	<target name="toy_lib">
+		<root all_classes="true"/>
+		<capability>
+			<concurrency support="scoop"/>
+			<void_safety support="all"/>
+		</capability>
+		<library name="base" location="$ISE_LIBRARY\library\base\base.ecf"/>
+		<library name="simple_json" location="$SIMPLE_EIFFEL/simple_json/simple_json.ecf"/>
+		<cluster name="core" location=".\core\" recursive="true"/>
+		<cluster name="extras" location=".\extras\" recursive="true"/>
+	</target>
+</system>
