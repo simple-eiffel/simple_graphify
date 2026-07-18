@@ -346,7 +346,7 @@ Options:
 
 feature {NONE} -- Constants
 
-	Version: STRING = "1.0.0"
+	Version: STRING = "1.1.0"
 			-- Tool version.
 
 	Exit_usage: INTEGER = 1

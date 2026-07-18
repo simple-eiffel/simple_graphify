@@ -462,7 +462,7 @@ feature {NONE} -- Scanning helpers
 	set_class_metrics (a_node: GRAPHIFY_NODE; a_class: EIFFEL_CLASS_NODE; a_content: STRING)
 			-- Fill class-level metrics from AST + raw content.
 		local
-			l_queries, l_commands, l_attributes, l_pre, l_post: INTEGER
+			l_queries, l_commands, l_attributes, l_pre, l_post, l_inv: INTEGER
 		do
 			across a_class.features as ic_f loop
 				if ic_f.kind = {EIFFEL_FEATURE_NODE}.kind_attribute then
@@ -472,20 +472,20 @@ feature {NONE} -- Scanning helpers
 				else
 					l_commands := l_commands + 1
 				end
-				if not ic_f.precondition.is_empty then
-					l_pre := l_pre + 1
-				end
-				if not ic_f.postcondition.is_empty then
-					l_post := l_post + 1
-				end
+					-- Structural contract depth: sum the actual require/ensure
+					-- assertion CLAUSES the full parser recorded per feature
+					-- (ET_ASSERTIONS.count), not a require/ensure keyword-line count.
+				l_pre := l_pre + ic_f.precondition_clauses
+				l_post := l_post + ic_f.postcondition_clauses
 			end
-			if l_pre = 0 then
-				-- Structural parse carries no contract text (Gobo shallow mode):
-				-- fall back to counting require/ensure keyword lines in source.
+			l_inv := a_class.invariant_clauses
+			if l_pre = 0 and l_post = 0 and l_inv = 0 then
+					-- The full parser recorded no clauses (e.g. a file that fell
+					-- back to the plain factory for a C3 character constant): use
+					-- the keyword-line count as an approximate floor.
 				l_pre := keyword_line_count (a_content, "require")
-			end
-			if l_post = 0 then
 				l_post := keyword_line_count (a_content, "ensure")
+				l_inv := keyword_line_count (a_content, "invariant").min (1)
 			end
 			a_node.set_metric ("features", a_class.features.count)
 			a_node.set_metric ("queries", l_queries)
@@ -493,7 +493,9 @@ feature {NONE} -- Scanning helpers
 			a_node.set_metric ("attributes", l_attributes)
 			a_node.set_metric ("preconditions", l_pre)
 			a_node.set_metric ("postconditions", l_post)
-			a_node.set_metric ("has_invariant", keyword_line_count (a_content, "invariant").min (1))
+			a_node.set_metric ("invariant_clauses", l_inv)
+			a_node.set_metric ("contract_clauses", l_pre + l_post + l_inv)
+			a_node.set_metric ("has_invariant", l_inv.min (1))
 			a_node.set_metric ("creators", a_class.creators.count)
 			a_node.set_metric ("loc", a_content.occurrences ('%N') + 1)
 		end

@@ -150,7 +150,12 @@ feature {NONE} -- Sections
 			across graph.nodes as ic_n loop
 				if ic_n.kind.same_string ("class") and not ic_n.has_flag ("external") then
 					l_classes := l_classes + 1
-					l_contracts := ic_n.metric ("preconditions") + ic_n.metric ("postconditions")
+						-- Structural clause total (require + ensure + invariant),
+						-- counted from the full AST rather than keyword lines.
+					l_contracts := ic_n.metric ("contract_clauses")
+					if l_contracts = 0 then
+						l_contracts := ic_n.metric ("preconditions") + ic_n.metric ("postconditions")
+					end
 					if l_contracts > 0 then
 						l_contracted := l_contracted + 1
 						l_top_keys.extend (padded_number (999999 - l_contracts, 6) + "|" + ic_n.label)
