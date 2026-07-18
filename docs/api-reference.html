@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>simple_graphify - API Reference</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header>
+        <h1>API Reference</h1>
+        <p class="tagline">Public classes and features of simple_graphify 1.0.0</p>
+    </header>
+
+    <nav>
+        <ul>
+            <li><a href="index.html">Home</a></li>
+            <li><a href="quick.html">QUICK API</a></li>
+            <li><a href="user-guide.html">User Guide</a></li>
+            <li><a href="architecture.html">Architecture</a></li>
+            <li><a href="cookbook.html">Cookbook</a></li>
+        </ul>
+    </nav>
+
+    <main>
+        <section>
+            <h2>SIMPLE_GRAPHIFY (facade)</h2>
+            <p>The one class most consumers need. Create with <code>make</code>.</p>
+
+            <div class="feature-sig">build (a_root, a_out_dir: STRING; a_deep, a_include_docs, a_full_deps: BOOLEAN): BOOLEAN</div>
+            <p>Builds the graph from directory <code>a_root</code> and writes all four artifacts to
+            <code>a_out_dir</code> (empty string = <code>&lt;root&gt;/graphify-out</code>). True when Eiffel
+            content was found and artifacts written; on False, <code>last_error</code> explains.
+            <em>require</em> <code>root_not_empty</code>; <em>ensure</em> <code>error_on_failure</code>.</p>
+
+            <div class="feature-sig">set_exclusions (a_csv: STRING)</div>
+            <p>Directory names (comma-separated) pruned from the next <code>build</code>'s walk, matched case-insensitively at any depth.</p>
+
+            <div class="feature-sig">load (a_graph_path: STRING): BOOLEAN &nbsp;|&nbsp; load_default (a_dir: STRING): BOOLEAN</div>
+            <p>Loads a graph.json. <code>load_default</code> probes <code>&lt;dir&gt;/graphify-out/graph.json</code> then <code>&lt;dir&gt;/graph.json</code>.</p>
+
+            <div class="feature-sig">query (a_question: STRING; a_hops, a_limit: INTEGER): STRING</div>
+            <p>Markdown subgraph answering <code>a_question</code>. <em>require</em> <code>graph_loaded: has_graph</code>, <code>hops_non_negative</code>, <code>limit_positive</code>; <em>ensure</em> <code>result_not_empty</code>.</p>
+
+            <div class="feature-sig">explain (a_name: STRING): STRING</div>
+            <p>Full record of one node: description, location, degree, community, god rank, metrics, all edges. Resolution: exact id &rarr; exact label &rarr; unique substring (ambiguity lists candidates).</p>
+
+            <div class="feature-sig">path_between (a_from, a_to: STRING): STRING</div>
+            <p>Undirected shortest connection with per-hop edge kind and confidence; reports "no path" or same-node cases explicitly.</p>
+
+            <div class="feature-sig">stats: STRING &nbsp;|&nbsp; report: STRING</div>
+            <p>Statistics summary; full GRAPH_REPORT.md regenerated from the loaded graph.</p>
+
+            <div class="feature-sig">annotate (a_edges_path, a_graph_path: STRING): STRING</div>
+            <p>Merges edges from a JSON file (<code>{"edges":[{"from","to","kind","why"}]}</code>) into the stored graph as confidence <code>inferred</code>, re-analyzes, rewrites the file. Unknown endpoints are rejected and listed; <code>last_error</code> set when nothing merges.</p>
+
+            <div class="feature-sig">install_skill (a_project_dir, a_exe_path: STRING): BOOLEAN</div>
+            <p>Writes the Claude Code skill into <code>&lt;project&gt;/.claude/skills/graphify-eiffel/SKILL.md</code> with <code>a_exe_path</code> substituted.</p>
+
+            <div class="feature-sig">graph: GRAPHIFY_GRAPH &nbsp;|&nbsp; has_graph: BOOLEAN &nbsp;|&nbsp; last_error, last_summary, last_out_dir: STRING</div>
+            <p>Current graph and status of the last operation.</p>
+        </section>
+
+        <section>
+            <h2>GRAPHIFY_GRAPH (model)</h2>
+            <div class="feature-sig">nodes: HASH_TABLE [GRAPHIFY_NODE, STRING] &nbsp;|&nbsp; edges: ARRAYED_LIST [GRAPHIFY_EDGE]</div>
+            <p>Nodes keyed by id; edges unique per (from, to, kind) &mdash; duplicates merge into <code>weight</code>.</p>
+            <div class="feature-sig">node_by_id / has_node / node_count / edge_count</div>
+            <div class="feature-sig">edges_from (a_id) / edges_to (a_id): ARRAYED_LIST [GRAPHIFY_EDGE]</div>
+            <div class="feature-sig">connect (a_from, a_to, a_kind, a_confidence: STRING; a_line: INTEGER; a_why: STRING)</div>
+            <p>Convenience edge builder; self-loops are silently dropped, duplicates merge.</p>
+            <div class="feature-sig">shortest_path (a_from, a_to: STRING): ARRAYED_LIST [STRING]</div>
+            <p>Undirected Dijkstra via <code>SIMPLE_GRAPH</code>; empty when disconnected. <em>require</em> both nodes present.</p>
+            <div class="feature-sig">sorted_node_ids / sorted_edges</div>
+            <p>Deterministic orderings used by serialization (ids ascending; edges by from/to/kind).</p>
+            <div class="feature-sig">communities: ARRAYED_LIST [GRAPHIFY_COMMUNITY] &nbsp;|&nbsp; god_node_ids &nbsp;|&nbsp; surprising &nbsp;|&nbsp; warnings</div>
+        </section>
+
+        <section>
+            <h2>GRAPHIFY_NODE</h2>
+            <div class="feature-sig">id, kind, label, file_path, description: STRING &nbsp;|&nbsp; line, community, degree: INTEGER</div>
+            <div class="feature-sig">flags: ARRAYED_LIST [STRING] &nbsp;|&nbsp; metrics: HASH_TABLE [INTEGER, STRING] &nbsp;|&nbsp; metric (a_name): INTEGER</div>
+            <p>Node kinds: <code>library</code>, <code>cluster</code>, <code>class</code>, <code>feature</code>, <code>document</code>, <code>rationale</code>.
+            Class metrics: features, queries, commands, attributes, preconditions, postconditions, has_invariant, creators, loc.
+            Flags: deferred, expanded, frozen, external, attribute, once.</p>
+        </section>
+
+        <section>
+            <h2>GRAPHIFY_EDGE</h2>
+            <div class="feature-sig">from_id, to_id, kind, confidence, why: STRING &nbsp;|&nbsp; weight, line: INTEGER &nbsp;|&nbsp; key: STRING</div>
+            <p>Kinds: <code>contains</code>, <code>depends_on</code>, <code>inherits</code>, <code>uses</code>, <code>creates</code>, <code>references</code>, <code>mentions</code>.
+            Confidence invariant-checked to <code>extracted | inferred | ambiguous</code>. No self-loops (class invariant).</p>
+        </section>
+
+        <section>
+            <h2>Pipeline classes</h2>
+            <table>
+                <tr><th>Class</th><th>Role</th></tr>
+                <tr><td><code>GRAPHIFY_BUILDER</code></td><td>Orchestrates a build: walk &rarr; scanners &rarr; analyzer. <code>set_excluded</code> before <code>build</code>.</td></tr>
+                <tr><td><code>GRAPHIFY_FS</code></td><td>Recursive walker; collects .ecf/.e/.md, prunes EIFGENs, hidden, _deprecated, bin, graphify-out + custom exclusions.</td></tr>
+                <tr><td><code>GRAPHIFY_ECF_SCANNER</code></td><td>Pass 1a: library nodes, depends_on edges, cluster topology, containment map (tolerant tag/attribute scan, namespace-proof).</td></tr>
+                <tr><td><code>GRAPHIFY_CLASS_SCANNER</code></td><td>Pass 1b/1c: class nodes from simple_eiffel_parser; comment-aware supplier scan (uses/creates/mentions); NOTE:/WHY:/TODO: rationale nodes; deep-mode feature nodes; contract metrics from source.</td></tr>
+                <tr><td><code>GRAPHIFY_DOC_SCANNER</code></td><td>Pass 2: markdown nodes + references edges to known classes/libraries.</td></tr>
+                <tr><td><code>GRAPHIFY_ANALYZER</code></td><td>Pass 3: degrees, label-propagation communities (topology edges only), library-majority labels, god nodes, surprising cross-community links.</td></tr>
+                <tr><td><code>GRAPHIFY_JSON_IO</code></td><td><code>serialized (graph): STRING</code> (hand-emitted, stable order) and <code>loaded (text): detachable GRAPHIFY_GRAPH</code> (via simple_json).</td></tr>
+                <tr><td><code>GRAPHIFY_QUERY</code></td><td>Scoring, neighborhood expansion, markdown rendering for query/explain/path/stats.</td></tr>
+                <tr><td><code>GRAPHIFY_REPORT</code> / <code>GRAPHIFY_HTML</code> / <code>GRAPHIFY_DOT</code></td><td>GRAPH_REPORT.md, self-contained graph.html, Graphviz DOT (via simple_graphviz).</td></tr>
+                <tr><td><code>GRAPHIFY_SKILL_WRITER</code></td><td>Claude Code skill payload + installer.</td></tr>
+                <tr><td><code>GRAPHIFY_UTIL</code></td><td>Mixin: UTF-8 conversion, path normalization, JSON escaping, merge sort, ALL_CAPS token scanning.</td></tr>
+            </table>
+        </section>
+
+        <section>
+            <h2>graph.json schema (v1.0)</h2>
+            <pre><code>{
+  "schema_version": "1.0",
+  "generator": "simple_graphify 1.0.0",
+  "root": "D:/prod/simple_http",
+  "generated_at": "2026-07-18T14:03:22",
+  "mode": "standard",
+  "stats": { "nodes": 214, "edges": 897, "communities": 9,
+             "files_scanned": 87, "classes": 61, "documents": 12 },
+  "nodes": [ { "id": "class:SIMPLE_HTTP", "kind": "class", "label": "SIMPLE_HTTP",
+               "file": "src/simple_http.e", "line": 14, "community": 1, "degree": 37,
+               "flags": [], "description": "...",
+               "metrics": { "features": 42, "preconditions": 30, "loc": 1180 } } ],
+  "edges": [ { "from": "class:SIMPLE_HTTP", "to": "class:SIMPLE_HTTP_RESPONSE",
+               "kind": "uses", "confidence": "extracted", "weight": 11,
+               "line": 210, "why": "supplier reference" } ],
+  "communities": [ { "id": 1, "label": "simple_http", "size": 38,
+                     "members_sample": ["class:SIMPLE_HTTP"] } ],
+  "god_nodes": ["class:SIMPLE_HTTP"],
+  "surprising": [ { "from": "doc:docs/design.md", "to": "class:HTTP_COOKIE_JAR",
+                    "kind": "references", "reason": "bridges ..." } ]
+}</code></pre>
+            <p>Ordering is fully deterministic: nodes by id, edges by (from, to, kind), metrics keys sorted, member samples sorted and capped at 8.</p>
+        </section>
+
+        <footer>
+            <p>&copy; 2026 Simple Eiffel Contributors. MIT License.</p>
+        </footer>
+    </main>
+</body>
+</html>

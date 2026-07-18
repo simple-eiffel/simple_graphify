@@ -1,0 +1,35 @@
+# Phase 7 Ship Evidence
+# Project: D:/prod/simple_graphify
+# Date: 2026-07-18
+
+Naming review: PASS (a_/l_/al_/ic_ conventions applied throughout at implementation time)
+Documentation site: COMPLETE
+  - index.html: YES
+  - quick.html: YES
+  - user-guide.html: YES
+  - api-reference.html: YES
+  - architecture.html: YES
+  - cookbook.html: YES
+  - css/style.css: YES
+  - images/logo.svg: YES
+  - .nojekyll: YES
+
+README.md: SHORT (gateway to docs site)
+CHANGELOG.md: COMPLETE
+LICENSE: MIT
+
+Compilation: PASS (ec.sh test, EiffelStudio 25.02.9.8732, finalized -keep)
+Tests: PASS (24 passed, 0 failed - re-verified after --exclude feature; log: data/output/test_run_full.log)
+Ecosystem: VERIFIED (ECF audit: only ISE base outside simple_*; scoop; void_safety=all)
+Real-world verification:
+  - simple_json: 107 files -> 139 nodes / 588 edges / 3.8 s
+  - D:/prod ecosystem: 5717 files -> 5917 nodes / 28410 edges / 40 s (with --exclude)
+
+Binaries (local, not committed per .gitignore):
+  - bin/simple_graphify.exe (release lean)
+  - bin/test_app.exe (finalized -keep)
+
+Human approved: YES (user directed ship: "run /eiffel.ship to add the docs site";
+repository publication previously directed and completed at commit 44144f6)
+
+Status: READY_FOR_PRODUCTION

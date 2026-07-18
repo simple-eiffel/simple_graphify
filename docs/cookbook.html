@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>simple_graphify - Cookbook</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header>
+        <h1>Cookbook</h1>
+        <p class="tagline">Recipes from real use</p>
+    </header>
+
+    <nav>
+        <ul>
+            <li><a href="index.html">Home</a></li>
+            <li><a href="quick.html">QUICK API</a></li>
+            <li><a href="user-guide.html">User Guide</a></li>
+            <li><a href="api-reference.html">API Reference</a></li>
+            <li><a href="architecture.html">Architecture</a></li>
+        </ul>
+    </nav>
+
+    <main>
+        <section>
+            <h2>Recipe: Onboard onto an unfamiliar library</h2>
+            <pre><code>simple_graphify build D:/prod/simple_sql
+# open graphify-out/GRAPH_REPORT.md -> God Nodes section
+simple_graphify explain SIMPLE_SQL_DATABASE</code></pre>
+            <p>
+                The god nodes are the integration hubs; <code>explain</code> on the top one shows
+                the whole shape: what it inherits, what it drives (weighted), and everything that
+                depends on it. Real output for simple_sql showed the facade funneling all SQLite
+                access through a single <code>SQLITE_DATABASE</code> supplier edge &mdash; the
+                engine isolation was visible in one command.
+            </p>
+        </section>
+
+        <section>
+            <h2>Recipe: Impact analysis before a refactor</h2>
+            <pre><code>simple_graphify explain HTTP_COOKIE_JAR
+# read the Incoming section: every client that will feel the change</code></pre>
+            <p>Incoming <code>uses</code>/<code>creates</code> edges with weights tell you which callers are heavy consumers and which touch the class once.</p>
+        </section>
+
+        <section>
+            <h2>Recipe: "How do these two subsystems even relate?"</h2>
+            <pre><code>simple_graphify path SIMPLE_SCHOLAR SIMPLE_SQL_DATABASE</code></pre>
+            <p>The hop chain names the classes that join the two, with the edge kind and confidence at every step. Cross-check <code>inferred</code> hops against source before acting on them.</p>
+        </section>
+
+        <section>
+            <h2>Recipe: Map a whole ecosystem (and keep it honest)</h2>
+            <pre><code>simple_graphify build D:/prod --exclude "gobo-gobo-25.09,_non-eiffel,simple_gobo"</code></pre>
+            <p>
+                Exclude vendored compiler/library source trees, or their classes (BOOLEAN, ANY,
+                ARRAYED_LIST) become false god nodes with thousands of edges. Symptom to watch for:
+                base-library class names at the top of the god list. Measured on a 112-library
+                ecosystem: 40 s, 5,917 nodes, 28,410 edges, 875 communities.
+            </p>
+        </section>
+
+        <section>
+            <h2>Recipe: Contract-coverage audit</h2>
+            <pre><code>simple_graphify report | grep -A 30 "Contract Coverage"</code></pre>
+            <p>
+                The report ranks classes by contract clauses and lists contract-free classes as
+                hardening candidates &mdash; a ready-made worklist for <code>/eiffel.harden</code>.
+                (Ecosystem measurement: 72% of 2,332 classes carry contracts.)
+            </p>
+        </section>
+
+        <section>
+            <h2>Recipe: Claude Code, graph-first</h2>
+            <pre><code>simple_graphify build .
+simple_graphify install</code></pre>
+            <p>
+                From the next session, structural questions ("what depends on X?", "how is Y
+                wired?") route through the graph instead of file search. The skill also teaches
+                Claude to record its own inferred connections:
+            </p>
+            <pre><code>echo '{"edges":[{"from":"class:RETRY_POLICY","to":"doc:docs/resilience.md",
+  "kind":"references","why":"design rationale"}]}' &gt; edges.json
+simple_graphify annotate edges.json</code></pre>
+            <p>Keep <code>edges.json</code> files in the repo; re-apply them after rebuilds.</p>
+        </section>
+
+        <section>
+            <h2>Recipe: Render the graph as SVG</h2>
+            <pre><code>dot -Tsvg graphify-out/graph.dot -o graph.svg      # requires Graphviz
+# or just open graphify-out/graph.html - no dependencies at all</code></pre>
+        </section>
+
+        <section>
+            <h2>Troubleshooting</h2>
+            <table>
+                <tr><th>Symptom</th><th>Cause &amp; fix</th></tr>
+                <tr><td>"GRAPH NOT LOADED"</td><td>No graph.json in ./graphify-out or . &mdash; run <code>build</code> first or pass <code>--graph FILE</code>.</td></tr>
+                <tr><td>Base-library classes as god nodes</td><td>Vendored source tree in the walk &mdash; add <code>--exclude</code>.</td></tr>
+                <tr><td>"Syntax error" lines during build</td><td>Gobo rejecting an odd file; the fallback parser takes over and the build continues. Check the report's warnings.</td></tr>
+                <tr><td>Node not found in <code>explain</code></td><td>Use the label (<code>SIMPLE_HTTP</code>) or full id (<code>class:SIMPLE_HTTP</code>); the error lists closest labels.</td></tr>
+                <tr><td>Duplicate class warnings</td><td>Same class name in multiple libraries (every <code>TEST_APP</code>); first registration wins &mdash; expected at ecosystem scale.</td></tr>
+                <tr><td>One giant community</td><td>Shared test-scaffolding names glue libraries; query within a library or exclude test clusters for a cleaner map.</td></tr>
+            </table>
+        </section>
+
+        <footer>
+            <p>&copy; 2026 Simple Eiffel Contributors. MIT License.</p>
+        </footer>
+    </main>
+</body>
+</html>

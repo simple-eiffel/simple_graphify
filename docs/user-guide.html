@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>simple_graphify - User Guide</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header>
+        <h1>User Guide</h1>
+        <p class="tagline">From empty directory to graph-first workflows</p>
+    </header>
+
+    <nav>
+        <ul>
+            <li><a href="index.html">Home</a></li>
+            <li><a href="quick.html">QUICK API</a></li>
+            <li><a href="api-reference.html">API Reference</a></li>
+            <li><a href="architecture.html">Architecture</a></li>
+            <li><a href="cookbook.html">Cookbook</a></li>
+        </ul>
+    </nav>
+
+    <main>
+        <section>
+            <h2>1. What problem this solves</h2>
+            <p>
+                AI coding assistants normally answer structural questions by searching files:
+                spawn agents, glob, grep, read, repeat. That burns tokens and misses the
+                architecture. simple_graphify builds the map once &mdash; deterministically, with no
+                LLM &mdash; and every later question reads from the map. On mixed corpora the
+                upstream Graphify project reports per-query savings up to 70x; a graph query here
+                returns a few KB of targeted markdown regardless of repository size.
+            </p>
+            <p>Use it when you ask questions like:</p>
+            <ul>
+                <li>"How is X wired to Y?" / "What depends on Z?"</li>
+                <li>"What are the integration hubs of this codebase?"</li>
+                <li>"Which classes have no contracts yet?"</li>
+                <li>"What does the design doc say connects to this class?"</li>
+            </ul>
+        </section>
+
+        <section>
+            <h2>2. Installation</h2>
+            <p>Requires the Simple Eiffel ecosystem (<code>SIMPLE_EIFFEL</code> environment variable) and EiffelStudio 25.02.</p>
+            <pre><code>cd $SIMPLE_EIFFEL/simple_graphify
+ec.sh release -config simple_graphify.ecf -target simple_graphify_app
+# binary: bin/simple_graphify.exe</code></pre>
+            <p>As a library dependency in your ECF:</p>
+            <pre><code>&lt;library name="simple_graphify" location="$SIMPLE_EIFFEL/simple_graphify/simple_graphify.ecf"/&gt;</code></pre>
+        </section>
+
+        <section>
+            <h2>3. Building your first graph</h2>
+            <pre><code>simple_graphify build D:/prod/simple_http</code></pre>
+            <p>This writes four artifacts to <code>D:/prod/simple_http/graphify-out/</code>:</p>
+            <table>
+                <tr><th>Artifact</th><th>What it is</th></tr>
+                <tr><td><code>graph.json</code></td><td>The persistent graph. Stable ordering; byte-identical for identical input (only the timestamp header varies). Commit it to share with a team.</td></tr>
+                <tr><td><code>GRAPH_REPORT.md</code></td><td>Human summary: god nodes, communities, surprising connections, contract coverage, suggested questions.</td></tr>
+                <tr><td><code>graph.html</code></td><td>Interactive visualization. Fully self-contained &mdash; open in any browser, no network access.</td></tr>
+                <tr><td><code>graph.dot</code></td><td>Graphviz export; render with <code>dot -Tsvg graph.dot -o graph.svg</code>.</td></tr>
+            </table>
+            <div class="note">
+                <strong>Vendored source trees:</strong> if your root contains third-party Eiffel
+                sources (a Gobo checkout, a base library mirror), their classes will dominate the
+                graph. Exclude them: <code>--exclude "gobo-gobo-25.09,third_party"</code>.
+                Directory names match case-insensitively at any depth.
+            </div>
+        </section>
+
+        <section>
+            <h2>4. Querying</h2>
+            <h3>query &mdash; scoped subgraph</h3>
+            <pre><code>simple_graphify query "how does the response cache work" --hops 1 --limit 30</code></pre>
+            <p>
+                Tokenizes the question, scores nodes (label match &gt; label word &gt; description
+                &gt; file path; class nodes score double), expands the neighborhood by
+                <code>--hops</code>, and emits matched nodes, their connections, and the communities
+                involved. Unmatched queries return the closest labels instead of failing.
+            </p>
+            <h3>explain &mdash; one node in full</h3>
+            <pre><code>simple_graphify explain SIMPLE_HTTP</code></pre>
+            <p>
+                Resolves by exact id (<code>class:SIMPLE_HTTP</code>), exact label, then unique
+                substring. Shows description, file:line, degree, community, god-node rank, metrics
+                (features, contracts, LOC), and every incoming and outgoing edge.
+            </p>
+            <h3>path &mdash; how two things relate</h3>
+            <pre><code>simple_graphify path SIMPLE_HTTP HTTP_COOKIE_JAR</code></pre>
+            <p>Undirected shortest path with the edge kind and confidence at every hop.</p>
+            <h3>stats &mdash; the shape of the graph</h3>
+            <pre><code>simple_graphify stats</code></pre>
+        </section>
+
+        <section>
+            <h2>5. Claude Code integration</h2>
+            <pre><code>simple_graphify install --project D:/prod/my_lib</code></pre>
+            <p>
+                Writes <code>.claude/skills/graphify-eiffel/SKILL.md</code> into the project with
+                the absolute path of your simple_graphify.exe wired in. From the next session,
+                Claude Code prefers graph queries over grep for structural questions, knows the
+                command syntax, and knows to rebuild after large refactors.
+            </p>
+            <h3>The assistant as the semantic pass</h3>
+            <p>
+                Upstream Graphify sends documents to an LLM backend for semantic extraction. Here
+                the assistant itself is that pass: when Claude infers a non-obvious connection
+                (a design doc explaining why two subsystems are linked), it records the edge:
+            </p>
+            <pre><code>{"edges": [
+  {"from": "class:HTTP_RETRY_POLICY", "to": "doc:docs/resilience.md",
+   "kind": "references", "why": "retry strategy rationale"}
+]}</code></pre>
+            <pre><code>simple_graphify annotate edges.json</code></pre>
+            <p>
+                Merged edges are forced to confidence <code>inferred</code>; endpoints must be
+                existing node ids (unknown endpoints are rejected and reported). The graph is
+                re-analyzed and rewritten in place.
+            </p>
+        </section>
+
+        <section>
+            <h2>6. Deep mode</h2>
+            <pre><code>simple_graphify build . --mode deep</code></pre>
+            <p>
+                Adds one node per feature (<code>feature:CLASS.name</code>) with argument counts,
+                contract presence flags, and <code>uses</code> edges derived from signature and
+                local types. Graphs get several times larger; use it for focused single-library
+                analysis rather than ecosystem-wide maps.
+            </p>
+        </section>
+
+        <section>
+            <h2>7. Team workflow</h2>
+            <ul>
+                <li>Commit <code>graphify-out/</code> &mdash; the graph is deterministic, so diffs are meaningful and merges rarely conflict.</li>
+                <li>Rebuild after structural changes (new classes, moved clusters, changed inheritance). A rebuild is full but fast &mdash; tens of seconds for thousands of files.</li>
+                <li>Keep <code>annotate</code> insights flowing: they survive rebuilds only if re-applied, so store your <code>edges.json</code> files in the repo.</li>
+            </ul>
+        </section>
+
+        <section>
+            <h2>8. Error handling and limits</h2>
+            <ul>
+                <li>Unparseable <code>.e</code> files fall back to a lightweight structural parser; files that still fail are skipped with a warning in the report &mdash; a build never aborts on one bad file.</li>
+                <li>Duplicate class names across libraries (every library's <code>TEST_APP</code>): first registration wins, later ones warn. Supplier references resolve to the first.</li>
+                <li>Short keyword-like class names (a class named <code>FOR</code>) will match uppercase tokens in comments ecosystem-wide and inflate that node's degree.</li>
+                <li>Exit codes: 0 success; 1 usage error; 2 graph/file not found; 3 no Eiffel content; 4 annotate rejected all edges.</li>
+            </ul>
+        </section>
+
+        <footer>
+            <p>&copy; 2026 Simple Eiffel Contributors. MIT License.</p>
+        </footer>
+    </main>
+</body>
+</html>

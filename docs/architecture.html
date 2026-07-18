@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>simple_graphify - Architecture</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header>
+        <h1>Architecture</h1>
+        <p class="tagline">Three deterministic passes, one analyzed graph, four artifacts</p>
+    </header>
+
+    <nav>
+        <ul>
+            <li><a href="index.html">Home</a></li>
+            <li><a href="quick.html">QUICK API</a></li>
+            <li><a href="user-guide.html">User Guide</a></li>
+            <li><a href="api-reference.html">API Reference</a></li>
+            <li><a href="cookbook.html">Cookbook</a></li>
+        </ul>
+    </nav>
+
+    <main>
+        <section>
+            <h2>Pipeline</h2>
+            <pre><code>            GRAPHIFY_BUILDER
+                  |
+   +--------------+---------------+
+   |              |               |
+GRAPHIFY_FS   (file lists)        |
+   |                              |
+   v                              v
+Pass 1a: GRAPHIFY_ECF_SCANNER   Pass 1b/1c: GRAPHIFY_CLASS_SCANNER
+  library nodes                   class nodes (simple_eiffel_parser)
+  depends_on edges                inherits edges (+external parents)
+  cluster topology                supplier scan: uses/creates/mentions
+  containment map                 rationale mining (NOTE:/WHY:/TODO:)
+                                  deep mode: feature nodes
+   +--------------+---------------+
+                  v
+Pass 2: GRAPHIFY_DOC_SCANNER      markdown -> document nodes,
+                                  references edges to classes/libraries
+                  v
+Pass 3: GRAPHIFY_ANALYZER         degrees, communities (label propagation),
+                                  god nodes, surprising connections
+                  v
+        GRAPHIFY_GRAPH (analyzed)
+                  |
+   +--------+-----+------+----------+
+   v        v            v          v
+graph.json  GRAPH_      graph.html  graph.dot
+(JSON_IO)   REPORT.md   (HTML)      (DOT via simple_graphviz)</code></pre>
+        </section>
+
+        <section>
+            <h2>Design decisions</h2>
+            <h3>Deterministic by construction</h3>
+            <p>
+                Every ordering is defined (ids sorted, edges keyed by from|to|kind, stable merge
+                sort throughout; label propagation is synchronous with ordinal seeds and
+                smallest-label tie-breaks). Identical input yields byte-identical
+                <code>graph.json</code> apart from the <code>generated_at</code> header. This is
+                what makes graphs git-diffable and team-mergeable, and it is enforced by a test
+                that builds twice and compares serializations.
+            </p>
+            <h3>No LLM in the binary</h3>
+            <p>
+                Upstream Graphify's third pass sends documents to an LLM. simple_graphify keeps the
+                executable fully local; semantic enrichment is delegated to the AI assistant via
+                <code>annotate</code>, which merges assistant-authored edges tagged
+                <code>inferred</code>. The assistant is the semantic pass.
+            </p>
+            <h3>Parser strategy</h3>
+            <p>
+                <code>simple_eiffel_parser</code> (Gobo-backed, lightweight fallback) provides class
+                structure: names, flags, parents with rename/redefine, features with types.
+                Because Gobo's shallow preparse does not carry comments or contract text, class
+                descriptions come from the source <code>note description:</code> clause and
+                contract metrics from require/ensure keyword-line counts &mdash; both deterministic
+                raw-source scans over content the builder already holds in memory.
+            </p>
+            <h3>Supplier scan, comment-aware</h3>
+            <p>
+                Each source line is split into code and comment parts (string-literal aware,
+                <code>%</code>-escape aware). ALL_CAPS tokens in code matching the scanned class
+                set become <code>uses</code> edges (<code>creates</code> when written
+                <code>create {X}</code>); tokens appearing only in comments become
+                <code>mentions</code> edges tagged <code>inferred</code>. Matching is restricted
+                to the project's own class set to avoid false positives on arbitrary uppercase
+                words &mdash; the residual weakness is project classes with short keyword-like
+                names (e.g. a Rosetta task class named <code>FOR</code>).
+            </p>
+            <h3>Communities from usage, not folders</h3>
+            <p>
+                Label propagation runs over topology edges only (inherits/uses/creates/references/
+                mentions), excluding <code>contains</code>/<code>depends_on</code>. Including
+                containment would collapse each library into one star-shaped community and hide
+                the actual coupling structure. Community labels come from majority library
+                membership, resolved through the containment chain.
+            </p>
+            <h3>ECF parsing without an XML library</h3>
+            <p>
+                ECFs are scanned with a tolerant tag/attribute string scanner (attribute order and
+                namespaces irrelevant; prolog/comments/closing tags skipped). Precedent:
+                claude_tools' UUID scanner. This dodges XML-namespace pitfalls for a format that is
+                machine-written and highly regular.
+            </p>
+            <h3>Hand-emitted JSON out, simple_json in</h3>
+            <p>
+                Serialization is hand-emitted to guarantee field order and byte stability; loading
+                uses <code>simple_json</code>. The seam is a single class
+                (<code>GRAPHIFY_JSON_IO</code>).
+            </p>
+        </section>
+
+        <section>
+            <h2>Node identity scheme</h2>
+            <table>
+                <tr><th>Kind</th><th>Id form</th><th>Example</th></tr>
+                <tr><td>library</td><td><code>library:&lt;name&gt;</code></td><td><code>library:simple_http</code></td></tr>
+                <tr><td>cluster</td><td><code>cluster:&lt;lib&gt;/&lt;name&gt;</code></td><td><code>cluster:simple_http/src</code></td></tr>
+                <tr><td>class</td><td><code>class:&lt;NAME&gt;</code></td><td><code>class:SIMPLE_HTTP</code></td></tr>
+                <tr><td>feature</td><td><code>feature:&lt;CLASS&gt;.&lt;name&gt;</code></td><td><code>feature:SIMPLE_HTTP.get</code></td></tr>
+                <tr><td>document</td><td><code>doc:&lt;relative/path&gt;</code></td><td><code>doc:docs/design.md</code></td></tr>
+                <tr><td>rationale</td><td><code>tag:&lt;CLASS&gt;#&lt;n&gt;</code></td><td><code>tag:SIMPLE_HTTP#2</code></td></tr>
+            </table>
+        </section>
+
+        <section>
+            <h2>Performance characteristics</h2>
+            <ul>
+                <li>Build is linear in total source size; the Gobo parse dominates. Measured: 107-file library in ~4 s; 5,717-file ecosystem in ~40 s (2,332 classes, 28,410 edges).</li>
+                <li>Query commands load graph.json once and run in memory; sub-second on ecosystem-scale graphs.</li>
+                <li>graph.json for an ecosystem-scale build is a few MB; single libraries are tens to hundreds of KB.</li>
+            </ul>
+        </section>
+
+        <section>
+            <h2>Extension points</h2>
+            <ul>
+                <li><strong>Incremental update:</strong> the deterministic pipeline makes a content-hash cache straightforward (planned; full rebuilds are currently fast enough).</li>
+                <li><strong>MCP server:</strong> the query engine returns plain strings, ready to wrap as MCP tools.</li>
+                <li><strong>Git hook:</strong> a post-commit rebuild is a one-line hook calling <code>build</code>.</li>
+                <li><strong>New artifact emitters:</strong> implement against <code>GRAPHIFY_GRAPH</code>'s sorted accessors (see GRAPHIFY_DOT for the pattern, ~80 lines).</li>
+            </ul>
+        </section>
+
+        <footer>
+            <p>&copy; 2026 Simple Eiffel Contributors. MIT License.</p>
+        </footer>
+    </main>
+</body>
+</html>

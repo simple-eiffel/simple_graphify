@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>simple_graphify - Quick API Reference</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header>
+        <h1>Quick API Reference</h1>
+        <p class="tagline">simple_graphify in five minutes</p>
+    </header>
+
+    <nav>
+        <ul>
+            <li><a href="index.html">Home</a></li>
+            <li><a href="user-guide.html">User Guide</a></li>
+            <li><a href="api-reference.html">API Reference</a></li>
+            <li><a href="architecture.html">Architecture</a></li>
+            <li><a href="cookbook.html">Cookbook</a></li>
+        </ul>
+    </nav>
+
+    <main>
+        <section>
+            <h2>CLI in one screen</h2>
+            <pre><code>simple_graphify build &lt;path&gt;             # graph a project -> &lt;path&gt;/graphify-out/
+simple_graphify query "question"          # scoped subgraph as compact markdown
+simple_graphify explain &lt;NAME&gt;            # one node + ALL its connections
+simple_graphify path &lt;A&gt; &lt;B&gt;              # shortest connection chain
+simple_graphify stats                     # node/edge kind counts, top degrees
+simple_graphify report                    # re-emit GRAPH_REPORT.md to stdout
+simple_graphify annotate edges.json       # merge assistant-inferred edges
+simple_graphify install                   # install the Claude Code skill</code></pre>
+            <p>Query commands read <code>./graphify-out/graph.json</code> by default, or take <code>--graph FILE</code>.</p>
+        </section>
+
+        <section>
+            <h2>Build options</h2>
+            <pre><code>simple_graphify build D:/prod/my_lib
+    --out DIR             # output directory (default &lt;path&gt;/graphify-out)
+    --mode deep           # add feature-level nodes
+    --exclude "a,b,c"     # skip directory names (e.g. vendored trees)
+    --no-docs             # skip markdown scanning
+    --full-deps           # include ISE/Gobo externals as nodes</code></pre>
+        </section>
+
+        <section>
+            <h2>Library facade (Eiffel)</h2>
+            <pre><code>local
+    g: SIMPLE_GRAPHIFY
+do
+    create g.make
+    if g.build ("D:/prod/my_lib", "", False, True, False) then
+        print (g.last_summary)
+        print (g.query ("how does parsing work", 1, 30))
+        print (g.explain ("MY_PARSER"))
+        print (g.path_between ("MY_APP", "MY_STORE"))
+    else
+        print (g.last_error)
+    end
+end</code></pre>
+        </section>
+
+        <section>
+            <h2>Common operations</h2>
+            <table>
+                <tr><th>I want to...</th><th>Do this</th></tr>
+                <tr><td>Map a repo for Claude Code</td><td><code>simple_graphify build .</code> then <code>simple_graphify install</code></td></tr>
+                <tr><td>Ask "what depends on X"</td><td><code>simple_graphify explain X</code> and read the Incoming section</td></tr>
+                <tr><td>See how two subsystems relate</td><td><code>simple_graphify path A B</code></td></tr>
+                <tr><td>Find the architecture hubs</td><td>open <code>graphify-out/GRAPH_REPORT.md</code>, God Nodes section</td></tr>
+                <tr><td>Browse the graph visually</td><td>open <code>graphify-out/graph.html</code> in a browser</td></tr>
+                <tr><td>Exclude vendored source trees</td><td><code>--exclude "gobo-gobo-25.09,third_party"</code></td></tr>
+                <tr><td>Record an insight the scanner can't see</td><td>write <code>edges.json</code>, run <code>annotate</code> (edge lands as <code>inferred</code>)</td></tr>
+            </table>
+        </section>
+
+        <section>
+            <h2>Reading edges</h2>
+            <pre><code>SIMPLE_HTTP --uses--&gt; HTTP_COOKIE_JAR (extracted, w11)</code></pre>
+            <ul>
+                <li><strong>kind</strong>: inherits | uses | creates | contains | depends_on | references | mentions</li>
+                <li><strong>confidence</strong>: <code>extracted</code> = explicit in source; <code>inferred</code> = derived (comment mentions, annotate); <code>ambiguous</code> = uncertain</li>
+                <li><strong>w</strong>: occurrence count (how often the connection appears)</li>
+            </ul>
+            <p>Full details in the <a href="api-reference.html">API Reference</a>.</p>
+        </section>
+
+        <footer>
+            <p>&copy; 2026 Simple Eiffel Contributors. MIT License.</p>
+        </footer>
+    </main>
+</body>
+</html>
