@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.1 — 2026-10-08
+
+### Fixed
+- Library target compiles: needed simple_graphviz fix to EIFFEL_GRAPH_GENERATOR (DIRECTORY.entries is PATH).
+
 ## 1.1.0 â€” 2026-07-18
 
 ### Changed
